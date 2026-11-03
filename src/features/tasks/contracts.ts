@@ -18,5 +18,6 @@ export interface TaskListProps {
 
 export interface StorageNoticeProps {
   status: StorageStatus;
+  replacementFailed?: boolean;
   onReplace(): void;
 }

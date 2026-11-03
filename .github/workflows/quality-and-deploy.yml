@@ -7,9 +7,9 @@ on:
   workflow_dispatch:
     inputs:
       deploy:
-        description: Publish the verified preview to Pages
+        description: Publish the verified build to Pages
         type: boolean
-        default: false
+        default: true
 
 permissions:
   contents: read
@@ -41,7 +41,7 @@ jobs:
           retention-days: 1
 
   deploy:
-    if: github.ref == 'refs/heads/main' && github.event_name == 'workflow_dispatch' && inputs.deploy
+    if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.deploy))
     needs: verify
     runs-on: ubuntu-latest
     timeout-minutes: 5

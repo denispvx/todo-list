@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import { TaskForm, TaskList } from '../features/tasks/components';
-import { validateTaskTitle } from '../features/tasks/model';
-import type { AddTaskResult, Task } from '../features/tasks/model';
+import { StorageNotice, TaskForm, TaskList } from '../features/tasks/components';
+import { useTasks } from '../features/tasks/useTasks';
+import type { AddTaskResult } from '../features/tasks/model';
 
 function taskCount(count: number): string {
   const lastTwo = count % 100;
@@ -13,28 +13,27 @@ function taskCount(count: number): string {
 }
 
 export default function App() {
-  const [tasks, setTasks] = useState<readonly Task[]>([]);
+  const { tasks, storageStatus, addTask, toggleTask, removeTask, replaceSavedTasks } = useTasks();
   const [announcement, setAnnouncement] = useState('');
+  const [replacementFailed, setReplacementFailed] = useState(false);
   const completedCount = tasks.filter((task) => task.completed).length;
 
-  function addTask(input: string): AddTaskResult {
-    const result = validateTaskTitle(input);
-    if (!result.ok) return result;
-    const task: Task = { id: crypto.randomUUID(), title: result.title, completed: false };
-    setTasks((current) => [task, ...current]);
-    setAnnouncement(`Добавлена задача: ${task.title}`);
-    return { ok: true };
+  function handleAdd(input: string): AddTaskResult {
+    const result = addTask(input);
+    if (result.ok) setAnnouncement(`Добавлена задача: ${input.trim()}`);
+    return result;
   }
 
-  function toggleTask(id: string) {
-    setTasks((current) => current.map((task) => task.id === id
-      ? { ...task, completed: !task.completed } : task));
-  }
-
-  function removeTask(id: string) {
+  function handleRemove(id: string) {
     const task = tasks.find((item) => item.id === id);
-    setTasks((current) => current.filter((item) => item.id !== id));
+    removeTask(id);
     if (task) setAnnouncement(`Удалена задача: ${task.title}`);
+  }
+
+  function handleReplace() {
+    const result = replaceSavedTasks();
+    setReplacementFailed(!result.ok);
+    if (result.ok) document.getElementById('task-title')?.focus();
   }
 
   return (
@@ -55,17 +54,20 @@ export default function App() {
           <h1>Мои задачи<span className="heading-dot">.</span></h1>
           <p className="page-description">Всё, что хочется сделать. В одном месте.</p>
         </div>
-        <TaskForm onAdd={addTask} />
+        <TaskForm onAdd={handleAdd} />
         <section className="list-panel" aria-labelledby="list-heading">
           <div className="list-heading">
             <h2 id="list-heading">Список задач</h2>
             <span className="list-count">{taskCount(tasks.length)}</span>
           </div>
-          <TaskList tasks={tasks} onToggle={toggleTask} onRemove={removeTask} />
+          <TaskList tasks={tasks} onToggle={toggleTask} onRemove={handleRemove} />
         </section>
+        <StorageNotice status={storageStatus} replacementFailed={replacementFailed} onReplace={handleReplace} />
         <footer className="workspace-footer">
           <span>{completedCount > 0 ? `Выполнено ${completedCount} из ${tasks.length}` : 'Маленькие шаги — тоже движение.'}</span>
-          <span className="prototype-note">Предпросмотр · до обновления страницы</span>
+          <span className="prototype-note">{storageStatus === 'available'
+            ? 'Задачи сохраняются в этом браузере'
+            : 'Изменения пока не сохранены'}</span>
         </footer>
         <p className="sr-only" role="status" aria-live="polite">{announcement}</p>
       </main>

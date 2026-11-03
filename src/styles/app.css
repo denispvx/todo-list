@@ -490,6 +490,43 @@ button svg {
   stroke-width: 1.5;
 }
 
+.storage-notice {
+  margin-top: 20px;
+  padding: 16px 18px;
+  border: 1px solid #daddce;
+  border-radius: 12px;
+  background: #f3f4eb;
+  color: var(--color-text);
+  font-size: 13px;
+  line-height: 1.65;
+  overflow-wrap: anywhere;
+}
+
+.storage-notice p {
+  margin: 0;
+}
+
+.storage-notice .storage-notice-description {
+  margin-top: 6px;
+  color: var(--color-text-muted);
+}
+
+.storage-recovery-button {
+  min-height: 44px;
+  max-width: 100%;
+  margin-top: 12px;
+  padding: 10px 14px;
+  border: 1px solid #7c8979;
+  border-radius: 7px;
+  background: var(--color-surface);
+  color: var(--color-accent);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.5;
+  text-align: left;
+  transition: background 150ms ease, border-color 150ms ease;
+}
+
 .sr-only {
   position: absolute;
   width: 1px;
@@ -502,6 +539,11 @@ button svg {
 }
 
 @media (hover: hover) {
+  .storage-recovery-button:hover {
+    border-color: var(--color-accent);
+    background: #e8eee3;
+  }
+
   .add-button:hover:not(:disabled) {
     background: #193c2d;
   }
