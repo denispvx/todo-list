@@ -1,0 +1,14 @@
+:root {
+  color-scheme: light;
+  --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --color-background: #f4f5f1;
+  --color-surface: #fff;
+  --color-text: #1d2520;
+  --color-text-muted: #606760;
+  --color-accent: #234c3b;
+  --color-focus: #31664d;
+  --color-border: #dce1d9;
+  --color-border-soft: #e8ebe5;
+  --color-control-border: #849087;
+  --color-danger: #a03a2d;
+}
