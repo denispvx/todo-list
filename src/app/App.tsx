@@ -14,20 +14,24 @@ function taskCount(count: number): string {
 
 export default function App() {
   const { tasks, storageStatus, addTask, toggleTask, removeTask, replaceSavedTasks } = useTasks();
-  const [announcement, setAnnouncement] = useState('');
+  const [announcement, setAnnouncement] = useState({ text: '', revision: 0 });
   const [replacementFailed, setReplacementFailed] = useState(false);
   const completedCount = tasks.filter((task) => task.completed).length;
 
+  function announce(text: string) {
+    setAnnouncement((current) => ({ text, revision: current.revision + 1 }));
+  }
+
   function handleAdd(input: string): AddTaskResult {
     const result = addTask(input);
-    if (result.ok) setAnnouncement(`Добавлена задача: ${input.trim()}`);
+    if (result.ok) announce(`Добавлена задача: ${input.trim()}`);
     return result;
   }
 
   function handleRemove(id: string) {
     const task = tasks.find((item) => item.id === id);
     removeTask(id);
-    if (task) setAnnouncement(`Удалена задача: ${task.title}`);
+    if (task) announce(`Удалена задача: ${task.title}`);
   }
 
   function handleReplace() {
@@ -50,7 +54,7 @@ export default function App() {
       </header>
       <main className="workspace">
         <div className="page-heading">
-          <p className="eyebrow">ПО ПОРЯДКУ, БЕЗ СПЕШКИ</p>
+          <p className="eyebrow">ЛИЧНЫЙ СПИСОК</p>
           <h1>Мои задачи<span className="heading-dot">.</span></h1>
           <p className="page-description">Всё, что хочется сделать. В одном месте.</p>
         </div>
@@ -64,12 +68,17 @@ export default function App() {
         </section>
         <StorageNotice status={storageStatus} replacementFailed={replacementFailed} onReplace={handleReplace} />
         <footer className="workspace-footer">
-          <span>{completedCount > 0 ? `Выполнено ${completedCount} из ${tasks.length}` : 'Маленькие шаги — тоже движение.'}</span>
-          <span className="prototype-note">{storageStatus === 'available'
+          {tasks.length > 0 && <span>{completedCount === tasks.length
+            ? 'Все задачи выполнены'
+            : `Выполнено ${completedCount} из ${tasks.length}`}</span>}
+          <span className="storage-hint">{storageStatus === 'available'
             ? 'Задачи сохраняются в этом браузере'
             : 'Изменения пока не сохранены'}</span>
         </footer>
-        <p className="sr-only" role="status" aria-live="polite">{announcement}</p>
+        <p className="sr-only" role="status" aria-live="polite" aria-atomic="true">
+          {/* Replace the child so repeated identical messages update the live region. */}
+          <span key={announcement.revision}>{announcement.text}</span>
+        </p>
       </main>
     </div>
   );
