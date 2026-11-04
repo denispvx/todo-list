@@ -46,6 +46,8 @@ npm run test:e2e
 
 Подробнее: [контракты](docs/contracts.md), [визуальное направление](docs/design.md).
 
+Шрифты Literata и Golos Text размещены локально; [лицензии и источники](public/fonts/README.md) включены в репозиторий.
+
 ## Публикация
 
 Проект размещается на GitHub Pages по пути `/todo-list/`. Workflow проверяет pull requests без публикации. Успешный push в main публикует ту же сборку, которая прошла тесты. Ручной запуск доступен через `Quality and Pages` с `deploy=true`. Секреты и платные сервисы приложению не нужны.

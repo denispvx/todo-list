@@ -26,7 +26,9 @@ export function StorageNotice({ status, replacementFailed = false, onReplace }: 
             Сохранение текущего списка заменит прежние данные.
           </p>
           {replacementFailed && (
-            <p role="alert">Не удалось сохранить текущий список. Попробуйте ещё раз.</p>
+            <p className="storage-notice-error" role="alert">
+              Не удалось сохранить текущий список. Попробуйте ещё раз.
+            </p>
           )}
           <button
             className="storage-recovery-button"

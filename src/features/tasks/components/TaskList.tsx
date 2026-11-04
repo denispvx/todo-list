@@ -45,7 +45,7 @@ export function TaskList({ tasks, onToggle, onRemove }: TaskListProps) {
   if (tasks.length === 0) return <EmptyState />;
 
   return (
-    <ul className="task-list" ref={listRef} aria-label="Список задач">
+    <ul className="task-list" ref={listRef} role="list" aria-label="Список задач">
       {tasks.map((task) => (
         <TaskItem
           key={task.id}

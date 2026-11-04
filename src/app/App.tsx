@@ -44,37 +44,49 @@ export default function App() {
     <div className="app-shell">
       <header className="site-header">
         <a className="brand" href={import.meta.env.BASE_URL} aria-label="Список — главная">
-          <svg viewBox="0 0 32 32" width="32" height="32" aria-hidden="true">
-            <rect width="32" height="32" rx="9" fill="currentColor" />
-            <path d="m9 16 4.5 4.5L23 11" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
-          <span>список</span>
+          <span>список<span className="brand-dot">.</span></span>
         </a>
-        <span className="header-note">Личное пространство</span>
+        <span
+          className={`save-indicator${storageStatus === 'available' ? '' : ' save-indicator--warning'}`}
+          title={storageStatus === 'available' ? 'Задачи сохраняются в этом браузере' : 'Изменения пока не сохранены'}
+        >
+          <span className="save-indicator-dot" aria-hidden="true" />
+          {storageStatus === 'available' ? 'На устройстве' : 'Не сохранено'}
+        </span>
       </header>
       <main className="workspace">
         <div className="page-heading">
-          <p className="eyebrow">ЛИЧНЫЙ СПИСОК</p>
-          <h1>Мои задачи<span className="heading-dot">.</span></h1>
-          <p className="page-description">Всё, что хочется сделать. В одном месте.</p>
+          <h1><span>Мои</span>{' '}<em>задачи<span className="heading-dot">.</span></em></h1>
+          {tasks.length > 0 && (
+            <div
+              className={`progress-summary${completedCount === tasks.length ? ' is-complete' : ''}`}
+              role="progressbar"
+              aria-label="Выполнение задач"
+              aria-valuemin={0}
+              aria-valuemax={tasks.length}
+              aria-valuenow={completedCount}
+              aria-valuetext={`Выполнено ${completedCount} из ${tasks.length}; всего ${taskCount(tasks.length)}`}
+            >
+              <div className="progress-figure">
+                <span className="progress-current">{String(completedCount).padStart(2, '0')}</span>
+                <span className="progress-divider">/</span>
+                <span className="progress-total">{String(tasks.length).padStart(2, '0')}</span>
+              </div>
+              <p className="progress-caption">{completedCount === tasks.length ? 'Всё сделано' : 'выполнено'}</p>
+              <div className="progress-track" aria-hidden="true">
+                <span style={{ width: `${completedCount / tasks.length * 100}%` }} />
+              </div>
+            </div>
+          )}
         </div>
-        <TaskForm onAdd={handleAdd} />
-        <section className="list-panel" aria-labelledby="list-heading">
-          <div className="list-heading">
-            <h2 id="list-heading">Список задач</h2>
-            <span className="list-count">{taskCount(tasks.length)}</span>
-          </div>
-          <TaskList tasks={tasks} onToggle={toggleTask} onRemove={handleRemove} />
-        </section>
-        <StorageNotice status={storageStatus} replacementFailed={replacementFailed} onReplace={handleReplace} />
-        <footer className="workspace-footer">
-          {tasks.length > 0 && <span>{completedCount === tasks.length
-            ? 'Все задачи выполнены'
-            : `Выполнено ${completedCount} из ${tasks.length}`}</span>}
-          <span className="storage-hint">{storageStatus === 'available'
-            ? 'Задачи сохраняются в этом браузере'
-            : 'Изменения пока не сохранены'}</span>
-        </footer>
+        <div className="task-workspace">
+          <TaskForm onAdd={handleAdd} />
+          <StorageNotice status={storageStatus} replacementFailed={replacementFailed} onReplace={handleReplace} />
+          <section className="list-panel" aria-labelledby="list-heading">
+            <h2 id="list-heading" className="sr-only">Список задач</h2>
+            <TaskList tasks={tasks} onToggle={toggleTask} onRemove={handleRemove} />
+          </section>
+        </div>
         <p className="sr-only" role="status" aria-live="polite" aria-atomic="true">
           {/* Replace the child so repeated identical messages update the live region. */}
           <span key={announcement.revision}>{announcement.text}</span>

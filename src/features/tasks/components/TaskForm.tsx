@@ -38,7 +38,7 @@ export function TaskForm({ onAdd }: TaskFormProps) {
 
   return (
     <form className="task-form" onSubmit={handleSubmit} noValidate>
-      <label className="field-label" htmlFor="task-title">
+      <label className="sr-only" htmlFor="task-title">
         Новая задача
       </label>
       <div className={`task-compose${error ? ' task-compose--invalid' : ''}`}>
@@ -62,26 +62,32 @@ export function TaskForm({ onAdd }: TaskFormProps) {
         <button
           className="add-button"
           type="submit"
+          aria-label="Добавить"
+          title="Добавить задачу"
           disabled={title.trim().length === 0}
         >
           <svg viewBox="0 0 20 20" fill="none" aria-hidden="true">
             <path d="M10 4v12M4 10h12" />
           </svg>
-          Добавить
         </button>
       </div>
-      <div className="form-caption">
-        {error ? (
-          <p className="field-error" id={errorId} role="alert">
-            {error}
-          </p>
-        ) : (
-          <p id={hintId}>До {MAX_TASK_TITLE_LENGTH} символов</p>
-        )}
-        <span className="keyboard-hint" aria-hidden="true">
-          <kbd>Enter</kbd> чтобы добавить
-        </span>
-      </div>
+      <p className="sr-only" id={hintId}>
+        До {MAX_TASK_TITLE_LENGTH} символов. Enter, чтобы добавить.
+      </p>
+      {(error || title.length >= 160) && (
+        <div className="form-caption">
+          {error && (
+            <p className="field-error" id={errorId} role="alert">
+              {error}
+            </p>
+          )}
+          {title.length >= 160 && (
+            <span className="character-count" aria-hidden="true">
+              {title.length} / {MAX_TASK_TITLE_LENGTH}
+            </span>
+          )}
+        </div>
+      )}
     </form>
   );
 }
