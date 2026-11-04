@@ -4,6 +4,8 @@ export function tasksReducer(tasks: readonly Task[], action: TaskAction): readon
   switch (action.type) {
     case 'add':
       return [action.task, ...tasks];
+    case 'add-many':
+      return action.tasks.length === 0 ? tasks : [...action.tasks, ...tasks];
     case 'toggle':
       if (!tasks.some((task) => task.id === action.id)) return tasks;
       return tasks.map((task) => task.id === action.id
@@ -12,5 +14,13 @@ export function tasksReducer(tasks: readonly Task[], action: TaskAction): readon
     case 'remove':
       if (!tasks.some((task) => task.id === action.id)) return tasks;
       return tasks.filter((task) => task.id !== action.id);
+    case 'update':
+      if (!tasks.some((task) => task.id === action.id && task.title !== action.title)) return tasks;
+      return tasks.map((task) => task.id === action.id ? { ...task, title: action.title } : task);
+    case 'restore': {
+      if (tasks.some((task) => task.id === action.task.id)) return tasks;
+      const index = Math.min(Math.max(action.index, 0), tasks.length);
+      return [...tasks.slice(0, index), action.task, ...tasks.slice(index)];
+    }
   }
 }

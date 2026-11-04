@@ -2,7 +2,7 @@ import { useId, useRef, useState, type FormEvent } from 'react';
 import type { TaskFormProps } from '../contracts';
 import { MAX_TASK_TITLE_LENGTH } from '../model';
 
-export function TaskForm({ onAdd }: TaskFormProps) {
+export function TaskForm({ onAdd, onBulkPaste, onOpenBulk }: TaskFormProps) {
   const [title, setTitle] = useState('');
   const [error, setError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -48,17 +48,29 @@ export function TaskForm({ onAdd }: TaskFormProps) {
           className="task-input"
           type="text"
           name="title"
-          placeholder="Что нужно сделать?"
+          placeholder="Новая задача"
           value={title}
           maxLength={MAX_TASK_TITLE_LENGTH}
           autoComplete="off"
           aria-invalid={error ? true : undefined}
           aria-describedby={error ? errorId : hintId}
+          onPaste={(event) => {
+            const pastedText = event.clipboardData.getData('text');
+            if (onBulkPaste && /[\r\n]/.test(pastedText)) {
+              event.preventDefault();
+              onBulkPaste(pastedText);
+            }
+          }}
           onChange={(event) => {
             setTitle(event.target.value);
             if (error) setError(null);
           }}
         />
+        {onOpenBulk && (
+          <button className="bulk-trigger" type="button" onClick={onOpenBulk}>
+            Списком
+          </button>
+        )}
         <button
           className="add-button"
           type="submit"

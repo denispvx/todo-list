@@ -1,0 +1,62 @@
+.task-row-actions {
+  display: flex;
+  flex: 0 0 auto;
+  gap: 0;
+}
+
+.task-item .task-edit-form {
+  display: grid;
+  width: 100%;
+  min-width: 0;
+  gap: 12px;
+}
+
+.task-edit-input {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  min-height: 76px;
+  padding: 12px;
+  resize: vertical;
+  border: 1px solid var(--color-border);
+  border-radius: 2px;
+  background: transparent;
+  color: var(--color-text);
+  font: inherit;
+  font-size: 16px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.task-edit-input:focus-visible {
+  outline: 3px solid var(--color-focus);
+  outline-offset: 3px;
+}
+
+.task-edit-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.task-edit-error {
+  margin: 0;
+  color: var(--color-danger);
+  font-size: 13px;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .task-row-actions .edit-button { opacity: 0; }
+  .task-item:hover .edit-button,
+  .task-item:focus-within .edit-button { opacity: 1; }
+  .task-row-actions .edit-button:hover {
+    background: #e6e6f2;
+    color: var(--color-accent);
+  }
+}
+
+@media (max-width: 420px) {
+  .task-item:has(.task-row-actions .edit-button) { gap: 4px; }
+  .task-item:has(.task-row-actions .edit-button) .task-label { gap: 10px; }
+  .task-edit-actions .button-primary { padding-inline: 16px; }
+}

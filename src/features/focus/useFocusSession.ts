@@ -1,0 +1,124 @@
+import { useEffect, useRef, useState } from 'react';
+import type { FocusSessionController } from './contracts';
+
+export const FOCUS_STORAGE_KEY = 'todo-list:focus:v1';
+export const FOCUS_DURATION_SECONDS = 25 * 60;
+const DURATION_MS = FOCUS_DURATION_SECONDS * 1000;
+
+type Session = Readonly<{
+  version: 1;
+  taskId: string | null;
+  remainingMs: number;
+  endsAt: number | null;
+}>;
+
+type State = Readonly<{
+  session: Session;
+  readBlocked: boolean;
+  persistenceFailed: boolean;
+}>;
+
+function emptySession(): Session {
+  return { version: 1, taskId: null, remainingMs: DURATION_MS, endsAt: null };
+}
+
+function readSession(): State {
+  const fallback: State = { session: emptySession(), readBlocked: false, persistenceFailed: false };
+  let raw: string | null;
+  try {
+    raw = window.localStorage.getItem(FOCUS_STORAGE_KEY);
+  } catch {
+    return { ...fallback, readBlocked: true, persistenceFailed: true };
+  }
+  if (raw === null) return fallback;
+  try {
+    const value: unknown = JSON.parse(raw);
+    if (typeof value !== 'object' || value === null || Array.isArray(value)) return fallback;
+    const data = value as Record<string, unknown>;
+    if (data.version !== 1
+      || typeof data.taskId !== 'string' || data.taskId.trim().length === 0
+      || typeof data.remainingMs !== 'number' || !Number.isFinite(data.remainingMs)
+      || data.remainingMs < 0 || data.remainingMs > DURATION_MS
+      || !(data.endsAt === null || (typeof data.endsAt === 'number' && Number.isFinite(data.endsAt)
+        && data.endsAt > 0 && data.endsAt <= Date.now() + DURATION_MS + 60_000))) return fallback;
+    return {
+      ...fallback,
+      session: { version: 1, taskId: data.taskId, remainingMs: data.remainingMs, endsAt: data.endsAt },
+    };
+  } catch {
+    return fallback;
+  }
+}
+
+function remaining(session: Session, now: number): number {
+  const duration = session.endsAt === null ? session.remainingMs : session.endsAt - now;
+  return Math.min(DURATION_MS, Math.max(0, duration));
+}
+
+export function useFocusSession(): FocusSessionController {
+  const [state, setState] = useState(readSession);
+  const latest = useRef(state);
+  const [now, setNow] = useState(() => Date.now());
+  const remainingSeconds = Math.ceil(remaining(state.session, now) / 1000);
+  const running = state.session.taskId !== null && state.session.endsAt !== null && remainingSeconds > 0;
+
+  useEffect(() => {
+    if (!running) return;
+    // Wall-clock deadlines stay accurate when background tabs throttle the interval.
+    const interval = window.setInterval(() => setNow(Date.now()), 250);
+    return () => window.clearInterval(interval);
+  }, [running]);
+
+  function publish(session: Session) {
+    const current = latest.current;
+    let persistenceFailed = current.readBlocked;
+    if (!current.readBlocked) {
+      try {
+        if (session.taskId === null) window.localStorage.removeItem(FOCUS_STORAGE_KEY);
+        else window.localStorage.setItem(FOCUS_STORAGE_KEY, JSON.stringify(session));
+      } catch {
+        persistenceFailed = true;
+      }
+    }
+    const next = { session, readBlocked: current.readBlocked, persistenceFailed };
+    latest.current = next;
+    setState(next);
+    setNow(Date.now());
+  }
+
+  function selectTask(id: string) {
+    if (!id.trim() || latest.current.session.taskId === id) return;
+    publish({ ...emptySession(), taskId: id });
+  }
+
+  function start() {
+    const session = latest.current.session;
+    const time = Date.now();
+    if (session.taskId === null || (session.endsAt !== null && session.endsAt > time)) return;
+    const duration = remaining(session, time) || DURATION_MS;
+    publish({ ...session, remainingMs: duration, endsAt: time + duration });
+  }
+
+  function pause() {
+    const session = latest.current.session;
+    if (session.taskId === null || session.endsAt === null) return;
+    publish({ ...session, remainingMs: remaining(session, Date.now()), endsAt: null });
+  }
+
+  function reset() {
+    const session = latest.current.session;
+    if (session.taskId === null) return;
+    publish({ ...session, remainingMs: DURATION_MS, endsAt: null });
+  }
+
+  function clear() {
+    if (latest.current.session.taskId === null) return;
+    publish(emptySession());
+  }
+
+  return {
+    taskId: state.session.taskId, remainingSeconds, running,
+    persistenceFailed: state.persistenceFailed,
+    selectTask, start, pause, reset, clear,
+  };
+}

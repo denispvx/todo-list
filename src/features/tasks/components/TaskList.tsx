@@ -6,7 +6,7 @@ import { TaskItem } from './TaskItem';
 
 type PendingFocus = { id: Task['id'] | null };
 
-export function TaskList({ tasks, onToggle, onRemove }: TaskListProps) {
+export function TaskList({ tasks, onToggle, onRemove, onUpdate }: TaskListProps) {
   const listRef = useRef<HTMLUListElement>(null);
   const pendingFocus = useRef<PendingFocus | null>(null);
 
@@ -52,6 +52,7 @@ export function TaskList({ tasks, onToggle, onRemove }: TaskListProps) {
           task={task}
           onToggle={onToggle}
           onRemove={handleRemove}
+          {...(onUpdate ? { onUpdate } : {})}
         />
       ))}
     </ul>

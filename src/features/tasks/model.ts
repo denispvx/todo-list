@@ -22,10 +22,17 @@ export type AddTaskResult =
   | { readonly ok: true }
   | { readonly ok: false; readonly error: TitleError };
 
+export type BatchAddResult =
+  | { readonly ok: true; readonly count: number }
+  | { readonly ok: false; readonly error: 'empty' | 'too-many' | 'invalid' };
+
 export type TaskAction =
   | { readonly type: 'add'; readonly task: Task }
+  | { readonly type: 'add-many'; readonly tasks: readonly Task[] }
   | { readonly type: 'toggle'; readonly id: Task['id'] }
-  | { readonly type: 'remove'; readonly id: Task['id'] };
+  | { readonly type: 'update'; readonly id: Task['id']; readonly title: string }
+  | { readonly type: 'remove'; readonly id: Task['id'] }
+  | { readonly type: 'restore'; readonly task: Task; readonly index: number };
 
 export type LoadResult =
   | { readonly kind: 'ready'; readonly tasks: readonly Task[] }
@@ -38,9 +45,14 @@ export type StorageStatus = 'available' | 'invalid' | 'unavailable' | 'write-err
 export interface TasksController {
   readonly tasks: readonly Task[];
   readonly storageStatus: StorageStatus;
+  readonly lastRemovedTask: Task | null;
   addTask(title: string): AddTaskResult;
+  addTasks(titles: readonly string[]): BatchAddResult;
+  updateTask(id: Task['id'], title: string): AddTaskResult;
   toggleTask(id: Task['id']): void;
   removeTask(id: Task['id']): void;
+  undoRemoval(): boolean;
+  dismissUndo(): void;
   replaceSavedTasks(): SaveResult;
 }
 
