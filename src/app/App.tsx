@@ -2,10 +2,12 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react
 import { BatchPanel, StorageNotice, TaskForm, TaskList, UndoNotice } from '../features/tasks/components';
 import { useTasks } from '../features/tasks/useTasks';
 import { parseBatchDraft } from '../features/tasks/batch';
-import type { AddTaskResult, BatchAddResult } from '../features/tasks/model';
+import type { AddTaskResult, BatchAddResult, TaskDetails, TaskDetailsResult } from '../features/tasks/model';
 import { FocusPanel } from '../features/focus/FocusPanel';
 import { useFocusSession } from '../features/focus/useFocusSession';
 import { TaskFilters, type TaskFilter } from '../features/tasks/components/TaskFilters';
+import { localDateKey, sortTasks, type TaskOrder } from '../features/tasks/planning';
+import { useLocalDay } from '../features/tasks/useLocalDay';
 
 function taskCount(count: number): string {
   const lastTwo = count % 100;
@@ -17,7 +19,7 @@ function taskCount(count: number): string {
 }
 
 export default function App() {
-  const { tasks, storageStatus, addTask, addTasks, updateTask, toggleTask, removeTask, replaceSavedTasks,
+  const { tasks, storageStatus, addTask, addTasks, addPlannedTask, updateTask, updateTaskDetails, toggleTask, removeTask, replaceSavedTasks,
     lastRemovedTask, undoRemoval, dismissUndo } = useTasks();
   const focus = useFocusSession();
   const [focusOpen, setFocusOpen] = useState(false);
@@ -25,6 +27,9 @@ export default function App() {
   const [bulkText, setBulkText] = useState('');
   const [bulkRevision, setBulkRevision] = useState(0);
   const [taskFilter, setTaskFilter] = useState<TaskFilter>('all');
+  const [taskOrder, setTaskOrder] = useState<TaskOrder>('manual');
+  const today = useLocalDay();
+  const dateText = new Intl.DateTimeFormat('ru-RU', { weekday: 'long', day: 'numeric', month: 'long' }).format(today);
   const restoredTaskId = useRef<string | null>(null);
   const [announcement, setAnnouncement] = useState({ text: '', revision: 0 });
   const [replacementFailed, setReplacementFailed] = useState(false);
@@ -77,6 +82,15 @@ export default function App() {
     return result;
   }
 
+  function handleAddPlanned(details: TaskDetails): TaskDetailsResult {
+    const result = addPlannedTask(details);
+    if (result.ok) {
+      setTaskFilter('all');
+      announce(`Добавлена задача: ${details.title.trim()}`);
+    }
+    return result;
+  }
+
   function handleRemove(id: string) {
     const task = tasks.find((item) => item.id === id);
     if (taskFilter !== 'all' && visibleTasks.length === 1
@@ -125,8 +139,9 @@ export default function App() {
     return result;
   }
 
-  const unfinished = tasks.filter((task) => !task.completed);
-  const visibleTasks = taskFilter === 'all' ? tasks : tasks.filter((task) => task.completed === (taskFilter === 'completed'));
+  const orderedTasks = sortTasks(tasks, taskOrder);
+  const unfinished = orderedTasks.filter((task) => !task.completed);
+  const visibleTasks = taskFilter === 'all' ? orderedTasks : orderedTasks.filter((task) => task.completed === (taskFilter === 'completed'));
   const focusTask = unfinished.find((task) => task.id === focus.taskId) ?? null;
 
   function openFocus() {
@@ -161,9 +176,9 @@ export default function App() {
   return (
     <div className="app-shell">
       <header className="site-header">
-        <a className="brand" href={import.meta.env.BASE_URL} aria-label="Список — главная">
-          <span>список<span className="brand-dot">.</span></span>
-        </a>
+        <time className="header-date" dateTime={localDateKey(today)}>
+          {dateText.charAt(0).toUpperCase() + dateText.slice(1)}
+        </time>
         <span
           className={`save-indicator${storageStatus === 'available' ? '' : ' save-indicator--warning'}`}
           title={storageStatus === 'available' ? 'Задачи сохраняются в этом браузере' : 'Изменения пока не сохранены'}
@@ -206,18 +221,28 @@ export default function App() {
           </div>}
         </div>
         <div className="task-workspace">
-          <TaskForm onAdd={handleAdd} onBulkPaste={openBulk} onOpenBulk={() => openBulk()} />
+          <TaskForm onAdd={handleAdd} onAddPlanned={handleAddPlanned} onBulkPaste={openBulk} onOpenBulk={() => openBulk()} />
           <StorageNotice status={storageStatus} replacementFailed={replacementFailed} onReplace={handleReplace} />
           {bulkOpen && <BatchPanel key={bulkRevision} initialText={bulkText} onSubmit={submitBulk} onClose={closeBulk} />}
           <section className="list-panel" aria-labelledby="list-heading">
             <h2 id="list-heading" className="sr-only">Список задач</h2>
-            {tasks.length > 0 && <TaskFilters tasks={tasks} value={taskFilter} onChange={setTaskFilter} />}
+            {tasks.length > 0 && <div className="task-toolbar">
+              <TaskFilters tasks={tasks} value={taskFilter} onChange={setTaskFilter} />
+              <label className="task-order">
+                <span className="sr-only">Порядок задач</span>
+                <select value={taskOrder} onChange={(event) => setTaskOrder(event.target.value as TaskOrder)}>
+                  <option value="manual">Как добавлены</option>
+                  <option value="priority">Сначала важные</option>
+                  <option value="due-date">По сроку</option>
+                </select>
+              </label>
+            </div>}
             {tasks.length > 0 && visibleTasks.length === 0 ? (
               <div className="filtered-empty" role="status">
                 <p>{taskFilter === 'active' ? 'Всё сделано.' : 'Здесь будут выполненные задачи.'}</p>
                 <button type="button" onClick={() => setTaskFilter('all')}>Показать все</button>
               </div>
-            ) : <TaskList tasks={visibleTasks} onToggle={handleToggle} onRemove={handleRemove} onUpdate={updateTask} />}
+            ) : <TaskList tasks={visibleTasks} onToggle={handleToggle} onRemove={handleRemove} onUpdate={updateTask} onUpdateDetails={updateTaskDetails} />}
           </section>
         </div>
         <p className="sr-only" role="status" aria-live="polite" aria-atomic="true">

@@ -1,5 +1,6 @@
 import { STORAGE_KEY, STORAGE_VERSION, validateTaskTitle } from './model';
 import type { LoadResult, SaveResult, StoredTasks, Task } from './model';
+import { isTaskUrgency, isValidDate } from './planning';
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -25,9 +26,17 @@ function decodeTasks(value: unknown): readonly Task[] | null {
 
     const title = validateTaskTitle(item.title);
     if (!title.ok || title.title !== item.title) return null;
+    if (('important' in item && typeof item.important !== 'boolean')
+      || ('urgency' in item && !isTaskUrgency(item.urgency))
+      || ('dueDate' in item && !isValidDate(item.dueDate))) return null;
 
     ids.add(item.id);
-    tasks.push({ id: item.id, title: item.title, completed: item.completed });
+    tasks.push({
+      id: item.id, title: item.title, completed: item.completed,
+      ...(typeof item.important === 'boolean' ? { important: item.important } : {}),
+      ...(isTaskUrgency(item.urgency) ? { urgency: item.urgency } : {}),
+      ...(typeof item.dueDate === 'string' ? { dueDate: item.dueDate } : {}),
+    });
   }
 
   return tasks;

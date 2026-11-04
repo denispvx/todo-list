@@ -1,7 +1,8 @@
 import { useRef, useState } from 'react';
 import { MAX_BATCH_TASKS } from './batch';
 import { validateTaskTitle } from './model';
-import type { AddTaskResult, BatchAddResult, SaveResult, StorageStatus, Task, TaskAction, TasksController } from './model';
+import type { AddTaskResult, BatchAddResult, SaveResult, StorageStatus, Task, TaskAction, TaskDetails, TaskDetailsResult, TasksController } from './model';
+import { taskPlanningFields, validateTaskDetails } from './planning';
 import { tasksReducer } from './reducer';
 import { loadTasks, saveTasks } from './storage';
 
@@ -62,6 +63,24 @@ export function useTasks(): TasksController {
 
   function toggleTask(id: Task['id']) {
     commit({ type: 'toggle', id });
+  }
+
+  function addPlannedTask(details: TaskDetails): TaskDetailsResult {
+    const result = validateTaskDetails(details);
+    if (!result.ok) return result;
+    const task: Task = {
+      id: crypto.randomUUID(), title: result.details.title, completed: false,
+      ...taskPlanningFields(result.details),
+    };
+    commit({ type: 'add', task });
+    return { ok: true };
+  }
+
+  function updateTaskDetails(id: Task['id'], details: TaskDetails): TaskDetailsResult {
+    const result = validateTaskDetails(details);
+    if (!result.ok) return result;
+    commit({ type: 'update-details', id, details: result.details });
+    return { ok: true };
   }
 
   function updateTask(id: Task['id'], input: string): AddTaskResult {
@@ -147,6 +166,8 @@ export function useTasks(): TasksController {
     addTask,
     addTasks,
     updateTask,
+    addPlannedTask,
+    updateTaskDetails,
     toggleTask,
     removeTask,
     undoRemoval,

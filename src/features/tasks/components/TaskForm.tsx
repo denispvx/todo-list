@@ -1,43 +1,73 @@
-import { useId, useRef, useState, type FormEvent } from 'react';
+import { useId, useLayoutEffect, useRef, useState, type FormEvent } from 'react';
 import type { TaskFormProps } from '../contracts';
-import { MAX_TASK_TITLE_LENGTH } from '../model';
+import { MAX_TASK_TITLE_LENGTH, type TaskDetailsError } from '../model';
+import { formatDueDate } from '../planning';
+import { TaskPlanningFields, type TaskPlanning } from './TaskPlanningFields';
 
-export function TaskForm({ onAdd, onBulkPaste, onOpenBulk }: TaskFormProps) {
+export function TaskForm({ onAdd, onAddPlanned, onBulkPaste, onOpenBulk }: TaskFormProps) {
   const [title, setTitle] = useState('');
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<TaskDetailsError | null>(null);
+  const [planningOpen, setPlanningOpen] = useState(false);
+  const [planning, setPlanning] = useState<TaskPlanning>({ important: false, urgency: 'none', dueDate: '' });
   const inputRef = useRef<HTMLInputElement>(null);
+  const formRef = useRef<HTMLFormElement>(null);
   const hintId = useId();
   const errorId = useId();
+  const planningId = useId();
+  const messages: Record<TaskDetailsError, string> = {
+    empty: 'Введите название задачи.',
+    'too-long': `Название должно быть не длиннее ${MAX_TASK_TITLE_LENGTH} символов.`,
+    'invalid-date': 'Укажите существующую дату.',
+    'invalid-planning': 'Проверьте параметры задачи.',
+  };
+  const hasPlanning = planning.important || planning.urgency !== 'none' || Boolean(planning.dueDate);
+  const planningSummary = [
+    planning.important ? 'Важно' : '',
+    planning.urgency === 'urgent' ? 'Срочно' : planning.urgency === 'later' ? 'Не срочно' : '',
+    planning.dueDate ? formatDueDate(planning.dueDate, false).label : '',
+  ].filter(Boolean).join(' · ');
+
+  useLayoutEffect(() => {
+    if (error === 'invalid-date' && planningOpen) formRef.current?.querySelector<HTMLInputElement>('input[type="date"]')?.focus();
+  }, [error, planningOpen]);
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const trimmedTitle = title.trim();
 
     if (!trimmedTitle) {
-      setError('Введите название задачи.');
+      setError('empty');
       inputRef.current?.focus();
       return;
     }
 
-    const result = onAdd(title);
+    const dateInput = event.currentTarget.querySelector<HTMLInputElement>('input[type="date"]');
+    if (dateInput?.validity.badInput) {
+      setError('invalid-date');
+      dateInput.focus();
+      return;
+    }
+    const result = onAddPlanned && (planningOpen || hasPlanning)
+      ? onAddPlanned({ title, ...planning })
+      : onAdd(title);
 
     if (!result.ok) {
-      setError(
-        result.error === 'too-long'
-          ? `Название должно быть не длиннее ${MAX_TASK_TITLE_LENGTH} символов.`
-          : 'Введите название задачи.',
-      );
-      inputRef.current?.focus();
+      setError(result.error);
+      if (result.error === 'invalid-date') setPlanningOpen(true);
+      if (result.error === 'invalid-date' && dateInput) dateInput.focus();
+      else inputRef.current?.focus();
       return;
     }
 
     setTitle('');
     setError(null);
+    setPlanning({ important: false, urgency: 'none', dueDate: '' });
+    setPlanningOpen(false);
     inputRef.current?.focus();
   }
 
   return (
-    <form className="task-form" onSubmit={handleSubmit} noValidate>
+    <form ref={formRef} className="task-form" onSubmit={handleSubmit} noValidate>
       <label className="sr-only" htmlFor="task-title">
         Новая задача
       </label>
@@ -52,8 +82,8 @@ export function TaskForm({ onAdd, onBulkPaste, onOpenBulk }: TaskFormProps) {
           value={title}
           maxLength={MAX_TASK_TITLE_LENGTH}
           autoComplete="off"
-          aria-invalid={error ? true : undefined}
-          aria-describedby={error ? errorId : hintId}
+          aria-invalid={error === 'empty' || error === 'too-long' ? true : undefined}
+          aria-describedby={error && error !== 'invalid-date' ? errorId : hintId}
           onPaste={(event) => {
             const pastedText = event.clipboardData.getData('text');
             if (onBulkPaste && /[\r\n]/.test(pastedText)) {
@@ -86,11 +116,27 @@ export function TaskForm({ onAdd, onBulkPaste, onOpenBulk }: TaskFormProps) {
       <p className="sr-only" id={hintId}>
         До {MAX_TASK_TITLE_LENGTH} символов. Enter, чтобы добавить.
       </p>
-      {(error || title.length >= 160) && (
+      {onAddPlanned && <>
+        <div className="planning-toolbar">
+          <button className={`planning-trigger${hasPlanning ? ' planning-trigger--set' : ''}`} type="button"
+            aria-label="Срок и приоритет" aria-expanded={planningOpen} aria-controls={planningId}
+            aria-describedby={hasPlanning && !planningOpen ? `${planningId}-summary` : undefined}
+            onClick={() => setPlanningOpen((current) => !current)}>
+            <svg viewBox="0 0 20 20" aria-hidden="true"><path d={planningOpen ? 'M4 10h12' : 'M10 4v12M4 10h12'} /></svg>
+            Срок и приоритет
+          </button>
+          {hasPlanning && !planningOpen && <span className="planning-summary" id={`${planningId}-summary`}>{planningSummary}</span>}
+        </div>
+        {planningOpen && <div id={planningId}>
+          <TaskPlanningFields value={planning} onChange={(value) => { setPlanning(value); setError(null); }}
+            dateError={error === 'invalid-date' ? messages[error] : null} />
+        </div>}
+      </>}
+      {((error && error !== 'invalid-date') || title.length >= 160) && (
         <div className="form-caption">
-          {error && (
+          {error && error !== 'invalid-date' && (
             <p className="field-error" id={errorId} role="alert">
-              {error}
+              {messages[error]}
             </p>
           )}
           {title.length >= 160 && (

@@ -1,7 +1,8 @@
-import type { AddTaskResult, BatchAddResult, StorageStatus, Task } from './model';
+import type { AddTaskResult, BatchAddResult, StorageStatus, Task, TaskDetails, TaskDetailsResult } from './model';
 
 export interface TaskFormProps {
   onAdd(title: string): AddTaskResult;
+  onAddPlanned?(details: TaskDetails): TaskDetailsResult;
   onBulkPaste?(text: string): void;
   onOpenBulk?(): void;
 }
@@ -23,6 +24,7 @@ export interface TaskItemProps {
   onToggle(id: Task['id']): void;
   onRemove(id: Task['id']): void;
   onUpdate?(id: Task['id'], title: string): AddTaskResult;
+  onUpdateDetails?(id: Task['id'], details: TaskDetails): TaskDetailsResult;
 }
 
 export interface TaskListProps {
@@ -30,6 +32,7 @@ export interface TaskListProps {
   onToggle(id: Task['id']): void;
   onRemove(id: Task['id']): void;
   onUpdate?(id: Task['id'], title: string): AddTaskResult;
+  onUpdateDetails?(id: Task['id'], details: TaskDetails): TaskDetailsResult;
 }
 
 export interface StorageNoticeProps {

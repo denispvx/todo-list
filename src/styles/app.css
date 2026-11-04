@@ -14,13 +14,14 @@ html {
 }
 
 body { min-width: 320px; margin: 0; }
-button, input { font: inherit; }
+button, input, select { font: inherit; }
 button { cursor: pointer; -webkit-tap-highlight-color: transparent; }
 button:disabled { cursor: not-allowed; }
 button, input, a, .task-label { touch-action: manipulation; }
 
 button:focus-visible,
 input:focus-visible,
+select:focus-visible,
 a:focus-visible {
   outline: 3px solid var(--color-focus);
   outline-offset: 5px;
@@ -52,26 +53,13 @@ button svg {
   justify-content: space-between;
   gap: 12px 24px;
   width: min(100%, 1240px);
-  min-height: 104px;
+  min-height: 88px;
   margin-inline: auto;
   padding-block: 20px;
   border-bottom: 1px solid var(--color-border);
 }
 
-.brand {
-  display: inline-flex;
-  align-items: center;
-  min-height: 44px;
-  color: var(--color-text);
-  font-family: var(--font-display);
-  font-size: 27px;
-  font-weight: 500;
-  letter-spacing: -0.065em;
-  line-height: 1;
-  text-decoration: none;
-}
-
-.brand-dot { color: var(--color-accent); }
+.header-date { color: var(--color-text-muted); font-size: 13px; line-height: 1.6; }
 
 .save-indicator {
   display: inline-flex;
@@ -98,7 +86,7 @@ button svg {
   align-items: start;
   gap: clamp(48px, 7vw, 112px);
   width: min(100%, 1240px);
-  margin: 88px auto 0;
+  margin: 64px auto 0;
 }
 
 .page-heading {
@@ -109,14 +97,14 @@ button svg {
 .page-heading h1 {
   margin: 0;
   font-family: var(--font-display);
-  font-size: clamp(68px, 7.1vw, 104px);
+  font-size: clamp(44px, 4.1vw, 64px);
   font-weight: 400;
   letter-spacing: -0.065em;
-  line-height: 1.08;
+  line-height: 1.55;
+  white-space: nowrap;
 }
 
-.page-heading h1 > em,
-.heading-line { display: block; font-weight: 400; }
+.page-heading h1 > em { display: inline; font-weight: 400; }
 .heading-dot { color: var(--color-accent); }
 
 .progress-summary { width: min(100%, 240px); margin-top: 76px; }
@@ -126,7 +114,7 @@ button svg {
   flex-direction: column;
   align-items: flex-start;
   gap: 28px;
-  margin-top: 76px;
+  margin-top: 40px;
 }
 .overview .progress-summary { margin-top: 0; }
 .focus-entry {
@@ -270,6 +258,27 @@ button svg {
 }
 
 .list-panel { min-width: 0; }
+.task-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0 12px;
+  margin-bottom: 8px;
+  border-bottom: 1px solid var(--color-border);
+}
+.task-toolbar .task-filters { margin: 0; border: 0; }
+.task-order { display: flex; max-width: 100%; }
+.task-order select {
+  max-width: 100%;
+  min-height: 44px;
+  padding: 8px 4px;
+  border: 0;
+  border-radius: 2px;
+  background: transparent;
+  color: var(--color-text-muted);
+  font-size: 13px;
+}
 .task-filters {
   display: flex;
   flex-wrap: wrap;
@@ -739,7 +748,6 @@ button svg {
 @media (max-width: 760px) {
   .app-shell { padding: 0 28px 40px; }
   .site-header { min-height: 80px; padding-block: 14px; }
-  .brand { font-size: 25px; }
   .workspace {
     grid-template-columns: minmax(0, 1fr);
     gap: 24px;
@@ -748,7 +756,7 @@ button svg {
   .page-heading { display: block; }
   .page-heading h1 {
     font-size: clamp(40px, 11.3vw, 64px);
-    line-height: 1.14;
+    line-height: 1.55;
   }
   .page-heading h1 > em { display: inline; }
   .progress-summary {

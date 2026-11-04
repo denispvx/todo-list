@@ -46,9 +46,6 @@
 }
 
 @media (hover: hover) and (pointer: fine) {
-  .task-row-actions .edit-button { opacity: 0; }
-  .task-item:hover .edit-button,
-  .task-item:focus-within .edit-button { opacity: 1; }
   .task-row-actions .edit-button:hover {
     background: #e6e6f2;
     color: var(--color-accent);
