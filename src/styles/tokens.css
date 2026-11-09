@@ -8,9 +8,11 @@
   --color-surface: #f7f4ec;
   --color-text: #20201c;
   --color-text-muted: #6c685f;
-  --color-accent: #3047dd;
-  --color-accent-hover: #2034be;
-  --color-focus: #3047dd;
+  --color-accent: #245b48;
+  --color-accent-hover: #194434;
+  --color-focus: var(--color-accent);
+  --color-selection: #dde8df;
+  --color-accent-soft: #dfe8df;
   --color-border: #d5d0c5;
   --color-control-border: #878277;
   --color-danger: #a23826;

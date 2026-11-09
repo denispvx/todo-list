@@ -6,8 +6,9 @@ import type { AddTaskResult, BatchAddResult, TaskDetails, TaskDetailsResult } fr
 import { FocusPanel } from '../features/focus/FocusPanel';
 import { useFocusSession } from '../features/focus/useFocusSession';
 import { TaskFilters, type TaskFilter } from '../features/tasks/components/TaskFilters';
-import { localDateKey, sortTasks, type TaskOrder } from '../features/tasks/planning';
+import { sortTasks, type TaskOrder } from '../features/tasks/planning';
 import { useLocalDay } from '../features/tasks/useLocalDay';
+import { WorkspaceHeader } from './WorkspaceHeader';
 
 function taskCount(count: number): string {
   const lastTwo = count % 100;
@@ -29,7 +30,6 @@ export default function App() {
   const [taskFilter, setTaskFilter] = useState<TaskFilter>('all');
   const [taskOrder, setTaskOrder] = useState<TaskOrder>('manual');
   const today = useLocalDay();
-  const dateText = new Intl.DateTimeFormat('ru-RU', { weekday: 'long', day: 'numeric', month: 'long' }).format(today);
   const restoredTaskId = useRef<string | null>(null);
   const [announcement, setAnnouncement] = useState({ text: '', revision: 0 });
   const [replacementFailed, setReplacementFailed] = useState(false);
@@ -175,18 +175,7 @@ export default function App() {
 
   return (
     <div className="app-shell">
-      <header className="site-header">
-        <time className="header-date" dateTime={localDateKey(today)}>
-          {dateText.charAt(0).toUpperCase() + dateText.slice(1)}
-        </time>
-        <span
-          className={`save-indicator${storageStatus === 'available' ? '' : ' save-indicator--warning'}`}
-          title={storageStatus === 'available' ? 'Задачи сохраняются в этом браузере' : 'Изменения пока не сохранены'}
-        >
-          <span className="save-indicator-dot" aria-hidden="true" />
-          {storageStatus === 'available' ? 'На устройстве' : 'Не сохранено'}
-        </span>
-      </header>
+      <WorkspaceHeader day={today} storageStatus={storageStatus} />
       <main className="workspace">
         <div className="page-heading">
           <h1><span>Мои</span>{' '}<em>задачи<span className="heading-dot">.</span></em></h1>
@@ -228,8 +217,10 @@ export default function App() {
             <h2 id="list-heading" className="sr-only">Список задач</h2>
             {tasks.length > 0 && <div className="task-toolbar">
               <TaskFilters tasks={tasks} value={taskFilter} onChange={setTaskFilter} />
-              <label className="task-order">
+              <label className={`task-order${taskOrder === 'manual' ? '' : ' task-order--active'}`}
+                title={`Порядок задач: ${taskOrder === 'manual' ? 'как добавлены' : taskOrder === 'priority' ? 'сначала важные' : 'по сроку'}`}>
                 <span className="sr-only">Порядок задач</span>
+                <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3 5h10M3 10h7M3 15h4m8-10v11m-3-3 3 3 3-3" /></svg>
                 <select value={taskOrder} onChange={(event) => setTaskOrder(event.target.value as TaskOrder)}>
                   <option value="manual">Как добавлены</option>
                   <option value="priority">Сначала важные</option>

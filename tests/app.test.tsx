@@ -37,8 +37,8 @@ describe('App storage integration', () => {
     });
     expect(screen.queryByText(warning)).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Сохранить текущий список' })).not.toBeInTheDocument();
-    expect(screen.getByText('На устройстве')).toBeVisible();
-    expect(screen.getByText('На устройстве')).toHaveAttribute('title', 'Задачи сохраняются в этом браузере');
+    expect(screen.getByText('О данных')).toBeVisible();
+    expect(screen.queryByText('Не сохранено')).not.toBeInTheDocument();
     expect(screen.getByRole('textbox', { name: 'Новая задача' })).toHaveFocus();
   });
 
@@ -60,6 +60,8 @@ describe('App storage integration', () => {
     expect(warning.closest('[role="status"]')).toHaveAttribute('aria-live', 'polite');
     expect(window.localStorage.getItem(STORAGE_KEY)).toBe(original);
     expect(screen.getByText('Не сохранено')).toBeVisible();
-    expect(screen.getByText('Не сохранено')).toHaveAttribute('title', 'Изменения пока не сохранены');
+    await user.click(screen.getByText('Не сохранено'));
+    expect(screen.getByText('Изменения не сохранены')).toBeVisible();
+    expect(screen.getByText(/могут исчезнуть после обновления/)).toBeVisible();
   });
 });

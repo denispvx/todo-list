@@ -47,7 +47,7 @@
 
 @media (hover: hover) and (pointer: fine) {
   .task-row-actions .edit-button:hover {
-    background: #e6e6f2;
+    background: var(--color-accent-soft);
     color: var(--color-accent);
   }
 }

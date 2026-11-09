@@ -27,6 +27,8 @@ a:focus-visible {
   outline-offset: 5px;
 }
 
+summary:focus-visible { outline: 3px solid var(--color-focus); outline-offset: 5px; }
+
 button svg {
   flex-shrink: 0;
   width: 20px;
@@ -38,7 +40,7 @@ button svg {
   stroke-linejoin: round;
 }
 
-::selection { background: #d9ddfc; color: var(--color-text); }
+::selection { background: var(--color-selection); color: var(--color-text); }
 
 .app-shell {
   width: 100%;
@@ -53,32 +55,45 @@ button svg {
   justify-content: space-between;
   gap: 12px 24px;
   width: min(100%, 1240px);
-  min-height: 88px;
+  min-height: 72px;
   margin-inline: auto;
-  padding-block: 20px;
+  padding-block: 14px;
   border-bottom: 1px solid var(--color-border);
 }
 
 .header-date { color: var(--color-text-muted); font-size: 13px; line-height: 1.6; }
 
-.save-indicator {
-  display: inline-flex;
+.data-info { position: relative; z-index: 2; }
+.data-info-trigger {
+  display: flex;
   align-items: center;
   gap: 8px;
+  min-height: 44px;
+  padding: 8px 0 8px 8px;
+  border-radius: 2px;
   color: var(--color-text-muted);
   font-size: 12px;
   line-height: 1.6;
+  list-style: none;
+  cursor: pointer;
 }
-
-.save-indicator-dot {
-  width: 5px;
-  height: 5px;
-  border-radius: 50%;
-  background: var(--color-accent);
+.data-info-trigger::-webkit-details-marker { display: none; }
+.data-info-trigger svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 1.4; stroke-linecap: round; }
+.data-info-trigger--warning { color: var(--color-danger); }
+.data-info-panel {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  width: min(328px, calc(100vw - 48px));
+  padding: 22px;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  box-shadow: 0 12px 40px #20201c12;
 }
-
-.save-indicator--warning { color: var(--color-danger); }
-.save-indicator--warning .save-indicator-dot { background: currentColor; }
+.data-info-panel h2 { margin: 0 0 12px; font-size: 16px; font-weight: 500; line-height: 1.4; }
+.data-info-panel p { margin: 0 0 12px; color: var(--color-text-muted); font-size: 13px; line-height: 1.65; }
+.data-info-panel p:last-child { margin-bottom: 0; }
+.data-info-panel .data-info-error { color: var(--color-danger); }
 
 .workspace {
   display: grid;
@@ -86,7 +101,7 @@ button svg {
   align-items: start;
   gap: clamp(48px, 7vw, 112px);
   width: min(100%, 1240px);
-  margin: 64px auto 0;
+  margin: 48px auto 0;
 }
 
 .page-heading {
@@ -96,15 +111,16 @@ button svg {
 
 .page-heading h1 {
   margin: 0;
-  font-family: var(--font-display);
-  font-size: clamp(44px, 4.1vw, 64px);
+  font-family: 'Literata Heading', var(--font-display);
+  font-size: clamp(68px, 7.1vw, 104px);
   font-weight: 400;
   letter-spacing: -0.065em;
   line-height: 1.55;
-  white-space: nowrap;
+  white-space: normal;
 }
 
-.page-heading h1 > em { display: inline; font-weight: 400; }
+.font-metrics-supported .page-heading h1 { line-height: 1.16; }
+.page-heading h1 > em { display: block; font-weight: 400; }
 .heading-dot { color: var(--color-accent); }
 
 .progress-summary { width: min(100%, 240px); margin-top: 76px; }
@@ -268,7 +284,8 @@ button svg {
   border-bottom: 1px solid var(--color-border);
 }
 .task-toolbar .task-filters { margin: 0; border: 0; }
-.task-order { display: flex; max-width: 100%; }
+.task-order { position: relative; display: flex; max-width: 100%; }
+.task-order > svg { display: none; }
 .task-order select {
   max-width: 100%;
   min-height: 44px;
@@ -720,7 +737,7 @@ button svg {
 }
 
 @media (hover: hover) {
-  .focus-entry:hover { background: #e2e3ef; }
+  .focus-entry:hover { background: var(--color-accent-soft); }
   .bulk-trigger:hover { color: var(--color-accent); }
   .button-primary:hover:not(:disabled) { background: var(--color-accent-hover); }
   .button-quiet:hover:not(:disabled) { color: var(--color-text); background: #e7e1d8; }
@@ -735,7 +752,7 @@ button svg {
   .delete-button:hover { background: #e7e1d8; color: var(--color-danger); }
   .task-label:hover .task-checkbox:not(:checked) {
     border-color: var(--color-accent);
-    background: #e6e6f2;
+    background: var(--color-accent-soft);
   }
   .storage-recovery-button:hover { background: #3c3b35; }
 }
@@ -747,25 +764,25 @@ button svg {
 
 @media (max-width: 760px) {
   .app-shell { padding: 0 28px 40px; }
-  .site-header { min-height: 80px; padding-block: 14px; }
+  .site-header { min-height: 64px; padding-block: 10px; }
   .workspace {
     grid-template-columns: minmax(0, 1fr);
-    gap: 24px;
-    margin-top: 28px;
+    gap: 16px;
+    margin-top: 20px;
   }
   .page-heading { display: block; }
   .page-heading h1 {
-    font-size: clamp(40px, 11.3vw, 64px);
+    font-size: clamp(40px, 9vw, 54px);
     line-height: 1.55;
   }
-  .page-heading h1 > em { display: inline; }
+  .page-heading h1 > em { display: block; }
   .progress-summary {
     display: grid;
     grid-template-columns: auto minmax(0, 1fr);
     align-items: center;
     gap: 0 12px;
     width: 100%;
-    margin-top: 16px;
+    margin-top: 12px;
   }
   .overview {
     display: grid;
@@ -801,7 +818,6 @@ button svg {
 
 @media (max-width: 420px) {
   .app-shell { padding-inline: 24px; }
-  .save-indicator { font-size: 11px; }
   .task-compose { gap: 8px; padding-bottom: 12px; }
   .task-input { font-size: 16px; }
   .add-button { width: 48px; height: 48px; }
@@ -813,6 +829,30 @@ button svg {
   .batch-panel h3 { font-size: 24px; }
   .batch-actions { gap: 4px; }
   .batch-actions .button-primary { padding-inline: 12px; font-size: 13px; }
+}
+
+@media (max-width: 520px) {
+  .task-toolbar { column-gap: 8px; }
+  .task-toolbar .task-filters { gap: 4px 10px; }
+  .task-order { width: 44px; height: 44px; }
+  .task-order > svg {
+    display: block;
+    position: absolute;
+    top: 12px;
+    left: 12px;
+    width: 20px;
+    height: 20px;
+    fill: none;
+    stroke: var(--color-text-muted);
+    stroke-width: 1.4;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    pointer-events: none;
+  }
+  .task-order--active > svg { stroke: var(--color-accent); }
+  .task-order--active { border-bottom: 2px solid var(--color-accent); }
+  .task-order select { width: 44px; padding: 0; font-size: 0; appearance: none; }
+  .task-order option { color: var(--color-text); font-size: 14px; }
 }
 
 @media (max-height: 520px) {
