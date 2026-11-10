@@ -1,7 +1,7 @@
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { BatchPanel, StorageNotice, TaskForm, TaskList, UndoNotice } from '../features/tasks/components';
 import { useTasks } from '../features/tasks/useTasks';
-import { parseBatchDraft } from '../features/tasks/batch';
+import { MAX_BATCH_DRAFT_LENGTH } from '../features/tasks/batch';
 import type { AddTaskResult, BatchAddResult, TaskDetails, TaskDetailsResult } from '../features/tasks/model';
 import { FocusPanel } from '../features/focus/FocusPanel';
 import { useFocusSession } from '../features/focus/useFocusSession';
@@ -30,10 +30,10 @@ export default function App() {
   const [taskFilter, setTaskFilter] = useState<TaskFilter>('all');
   const [taskOrder, setTaskOrder] = useState<TaskOrder>('manual');
   const today = useLocalDay();
-  const restoredTaskId = useRef<string | null>(null);
+  const restoredTaskId = useRef<string | null | undefined>(undefined);
   const [announcement, setAnnouncement] = useState({ text: '', revision: 0 });
   const [replacementFailed, setReplacementFailed] = useState(false);
-  const completedCount = tasks.filter((task) => task.completed).length;
+  const completedCount = useMemo(() => tasks.filter((task) => task.completed).length, [tasks]);
 
   const announce = useCallback((text: string) => {
     setAnnouncement((current) => ({ text, revision: current.revision + 1 }));
@@ -49,13 +49,13 @@ export default function App() {
   }, [lastRemovedTask, undoRemoval, announce]);
 
   useLayoutEffect(() => {
-    if (!restoredTaskId.current) return;
+    if (restoredTaskId.current === undefined) return;
     const row = Array.from(document.querySelectorAll('[data-task-id]'))
       .find((element) => element.getAttribute('data-task-id') === restoredTaskId.current);
     const target = row?.querySelector<HTMLInputElement>('input[type="checkbox"]');
     if (target) target.focus();
     else document.getElementById('task-title')?.focus();
-    restoredTaskId.current = null;
+    restoredTaskId.current = undefined;
   }, [tasks]);
 
   useEffect(() => {
@@ -95,7 +95,7 @@ export default function App() {
     const task = tasks.find((item) => item.id === id);
     if (taskFilter !== 'all' && visibleTasks.length === 1
       && document.activeElement?.closest('[data-task-id]')?.getAttribute('data-task-id') === id) {
-      restoredTaskId.current = 'task-input';
+      restoredTaskId.current = null;
     }
     removeTask(id);
     if (focus.taskId === id) focus.clear();
@@ -106,7 +106,7 @@ export default function App() {
     const task = tasks.find((item) => item.id === id);
     if (taskFilter !== 'all' && document.activeElement?.closest('[data-task-id]')?.getAttribute('data-task-id') === id) {
       const index = visibleTasks.findIndex((item) => item.id === id);
-      restoredTaskId.current = visibleTasks[index + 1]?.id ?? visibleTasks[index - 1]?.id ?? 'task-input';
+      restoredTaskId.current = visibleTasks[index + 1]?.id ?? visibleTasks[index - 1]?.id ?? null;
     }
     toggleTask(id);
     if (task && !task.completed && focus.taskId === id) focus.clear();
@@ -117,7 +117,8 @@ export default function App() {
       document.getElementById('bulk-draft')?.focus();
       return;
     }
-    setBulkText(text);
+    // Keep one extra character so the form can detect an oversized paste.
+    setBulkText(text.slice(0, MAX_BATCH_DRAFT_LENGTH + 1));
     setBulkRevision((current) => current + 1);
     setBulkOpen(true);
   }
@@ -127,10 +128,8 @@ export default function App() {
     document.getElementById('task-title')?.focus();
   }
 
-  function submitBulk(text: string): BatchAddResult {
-    const preview = parseBatchDraft(text);
-    if (!preview.valid) return { ok: false, error: preview.tooMany ? 'too-many' : preview.total === 0 ? 'empty' : 'invalid' };
-    const result = addTasks(preview.lines.map((line) => line.title));
+  function submitBulk(titles: readonly string[]): BatchAddResult {
+    const result = addTasks(titles);
     if (result.ok) {
       setTaskFilter('all');
       closeBulk();
@@ -139,9 +138,11 @@ export default function App() {
     return result;
   }
 
-  const orderedTasks = sortTasks(tasks, taskOrder);
-  const unfinished = orderedTasks.filter((task) => !task.completed);
-  const visibleTasks = taskFilter === 'all' ? orderedTasks : orderedTasks.filter((task) => task.completed === (taskFilter === 'completed'));
+  const orderedTasks = useMemo(() => sortTasks(tasks, taskOrder), [tasks, taskOrder]);
+  const unfinished = useMemo(() => orderedTasks.filter((task) => !task.completed), [orderedTasks]);
+  const visibleTasks = taskFilter === 'all'
+    ? orderedTasks
+    : orderedTasks.filter((task) => task.completed === (taskFilter === 'completed'));
   const focusTask = unfinished.find((task) => task.id === focus.taskId) ?? null;
 
   function openFocus() {
@@ -162,7 +163,8 @@ export default function App() {
     if (!focusTask) return;
     toggleTask(focusTask.id);
     announce(`Выполнена задача: ${focusTask.title}`);
-    const next = unfinished.find((task) => task.id !== focusTask.id);
+    const index = unfinished.indexOf(focusTask);
+    const next = unfinished.length > 1 ? unfinished[(index + 1) % unfinished.length] : undefined;
     if (next) focus.selectTask(next.id);
     else focus.clear();
   }
@@ -229,9 +231,12 @@ export default function App() {
               </label>
             </div>}
             {tasks.length > 0 && visibleTasks.length === 0 ? (
-              <div className="filtered-empty" role="status">
-                <p>{taskFilter === 'active' ? 'Всё сделано.' : 'Здесь будут выполненные задачи.'}</p>
-                <button type="button" onClick={() => setTaskFilter('all')}>Показать все</button>
+              <div className="filtered-empty">
+                <p role="status">{taskFilter === 'active' ? 'Всё сделано.' : 'Здесь будут выполненные задачи.'}</p>
+                <button type="button" onClick={() => {
+                  setTaskFilter('all');
+                  document.getElementById('task-title')?.focus();
+                }}>Показать все</button>
               </div>
             ) : <TaskList tasks={visibleTasks} onToggle={handleToggle} onRemove={handleRemove} onUpdate={updateTask} onUpdateDetails={updateTaskDetails} />}
           </section>

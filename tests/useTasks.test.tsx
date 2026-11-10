@@ -152,6 +152,22 @@ describe('useTasks', () => {
     expect(result.current.tasks).toHaveLength(2);
   });
 
+  it('does not overwrite a list repaired in another tab while this tab was editing in memory', () => {
+    window.localStorage.setItem(STORAGE_KEY, '{broken');
+    const { result } = mountTasks();
+    act(() => result.current.addTask('Черновик'));
+    const repaired = seed([savedTask]);
+
+    act(() => {
+      expect(result.current.replaceSavedTasks()).toEqual({ ok: false });
+      result.current.addTask('Ещё одна задача');
+    });
+
+    expect(result.current.storageStatus).toBe('conflict');
+    expect(result.current.tasks.map(({ title }) => title)).toEqual(['Ещё одна задача', 'Черновик']);
+    expect(window.localStorage.getItem(STORAGE_KEY)).toBe(repaired);
+  });
+
   it('keeps automatic saving blocked when replacement of invalid data fails', () => {
     window.localStorage.setItem(STORAGE_KEY, '{broken');
     const { result } = mountTasks();

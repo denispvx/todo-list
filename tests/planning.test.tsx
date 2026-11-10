@@ -9,7 +9,9 @@ import { useTasks } from '../src/features/tasks/useTasks';
 const base: Task = { id: 'old', title: 'Прежняя задача', completed: true };
 const details: TaskDetails = { title: 'План', important: true, urgency: 'urgent', dueDate: '2028-02-29' };
 function seed(tasks: readonly Task[] = [base]) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify({ version: 1, tasks }));
+  const snapshot = JSON.stringify({ version: 1, tasks });
+  localStorage.setItem(STORAGE_KEY, snapshot);
+  return snapshot;
 }
 beforeEach(() => localStorage.clear());
 afterEach(() => { vi.restoreAllMocks(); localStorage.clear(); });
@@ -18,7 +20,7 @@ describe('calendar-only planning', () => {
   it.each(['0001-01-01', '9999-12-31', '2028-02-29', '2000-02-29', '2026-04-30'])('accepts a real canonical day %s', (day) => {
     expect(isValidDate(day)).toBe(true);
   });
-  it.each(['0000-01-01', '2026-02-29', '1900-02-29', '2026-04-31', '2026-13-01', '2026-00-01', '2026-01-00', '2026-1-01', '2026-11-04T00:00:00Z', '', ' 2026-11-04'])('rejects a malformed or impossible day %s', (day) => {
+  it.each(['0000-01-01', '2026-02-29', '1900-02-29', '2026-04-31', '2026-13-01', '2026-00-01', '2026-01-00', '2026-1-01', '2026-11-04T00:00:00Z', '', ' 2026-11-04', '2026-11-04\n'])('rejects a malformed or impossible day %s', (day) => {
     expect(isValidDate(day)).toBe(false);
   });
   it('uses local calendar fields at midnight instead of converting the day to UTC', () => {
@@ -48,8 +50,8 @@ describe('compatible storage and atomic planning changes', () => {
   });
   it('round-trips optional metadata without altering old tasks', () => {
     const planned: Task = { id: 'planned', title: 'Новая', completed: false, important: true, urgency: 'later', dueDate: '2026-11-04' };
-    seed([base, planned]);
-    expect(loadTasks()).toEqual({ kind: 'ready', tasks: [base, planned] });
+    const snapshot = seed([base, planned]);
+    expect(loadTasks()).toEqual({ kind: 'ready', tasks: [base, planned], snapshot });
   });
   it.each([
     { important: 'yes' }, { important: null }, { urgency: 'asap' }, { urgency: null },
@@ -82,7 +84,7 @@ describe('compatible storage and atomic planning changes', () => {
     expect(result.current.tasks).toEqual([
       { id: expect.any(String), title: 'План', completed: false, important: true, urgency: 'urgent', dueDate: '2028-02-29' }, base,
     ]);
-    expect(loadTasks()).toEqual({ kind: 'ready', tasks: result.current.tasks });
+    expect(loadTasks()).toEqual({ kind: 'ready', tasks: result.current.tasks, snapshot: localStorage.getItem(STORAGE_KEY) });
   });
   it('rejects untrusted urgency and importance at the controller boundary', () => {
     const { result } = renderHook(() => useTasks());
@@ -107,7 +109,7 @@ describe('compatible storage and atomic planning changes', () => {
     act(() => { expect(result.current.undoRemoval()).toBe(true); });
     expect(result.current.tasks[1]).toEqual(removed);
     expect(write).toHaveBeenCalledTimes(2);
-    expect(loadTasks()).toEqual({ kind: 'ready', tasks: result.current.tasks });
+    expect(loadTasks()).toEqual({ kind: 'ready', tasks: result.current.tasks, snapshot: localStorage.getItem(STORAGE_KEY) });
   });
   it('keeps a rejected edit unchanged and allows clearing all metadata with one write', () => {
     const planned: Task = { ...base, important: true, urgency: 'urgent', dueDate: '2028-02-29' };

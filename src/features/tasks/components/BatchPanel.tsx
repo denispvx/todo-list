@@ -1,5 +1,5 @@
 import { useEffect, useId, useRef, useState, type FormEvent } from 'react';
-import { MAX_BATCH_TASKS, parseBatchDraft } from '../batch';
+import { MAX_BATCH_DRAFT_LENGTH, MAX_BATCH_TASKS, parseBatchDraft } from '../batch';
 import { MAX_TASK_TITLE_LENGTH } from '../model';
 import type { BatchPanelProps } from '../contracts';
 
@@ -10,7 +10,8 @@ const submitErrors = {
 };
 
 export function BatchPanel({ initialText, onSubmit, onClose }: BatchPanelProps) {
-  const [text, setText] = useState(initialText);
+  const [text, setText] = useState(initialText.length > MAX_BATCH_DRAFT_LENGTH ? '' : initialText);
+  const [oversized, setOversized] = useState(initialText.length > MAX_BATCH_DRAFT_LENGTH);
   const [submissionError, setSubmissionError] = useState<string | null>(null);
   const [attempted, setAttempted] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -26,7 +27,9 @@ export function BatchPanel({ initialText, onSubmit, onClose }: BatchPanelProps) 
       : preview.total === 0 && (text.trim().length > 0 || attempted)
         ? submitErrors.empty
         : null;
-  const error = submissionError ?? draftError;
+  const error = oversized
+    ? 'Вставленный текст слишком большой. Разделите его на несколько списков.'
+    : submissionError ?? draftError;
 
   useEffect(() => {
     textareaRef.current?.focus();
@@ -35,9 +38,9 @@ export function BatchPanel({ initialText, onSubmit, onClose }: BatchPanelProps) 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setAttempted(true);
-    if (!preview.valid) return;
+    if (oversized || !preview.valid) return;
 
-    const result = onSubmit(text);
+    const result = onSubmit(preview.lines.map((line) => line.title));
     if (!result.ok) setSubmissionError(submitErrors[result.error]);
   }
 
@@ -65,8 +68,21 @@ export function BatchPanel({ initialText, onSubmit, onClose }: BatchPanelProps) 
           value={text}
           aria-invalid={error ? true : undefined}
           aria-describedby={`${hintId}${error ? ` ${errorId}` : ''}`}
+          onPaste={(event) => {
+            const field = event.currentTarget;
+            const selectedLength = field.selectionEnd - field.selectionStart;
+            if (field.value.length - selectedLength + event.clipboardData.getData('text').length > MAX_BATCH_DRAFT_LENGTH) {
+              event.preventDefault();
+              setOversized(true);
+            }
+          }}
           onChange={(event) => {
+            if (event.target.value.length > MAX_BATCH_DRAFT_LENGTH) {
+              setOversized(true);
+              return;
+            }
             setText(event.target.value);
+            setOversized(false);
             setSubmissionError(null);
             setAttempted(false);
           }}
@@ -81,7 +97,7 @@ export function BatchPanel({ initialText, onSubmit, onClose }: BatchPanelProps) 
               В списке: {preview.total}
             </p>
             <ol className="batch-preview" role="list" aria-label="Предпросмотр задач">
-              {preview.lines.slice(0, MAX_BATCH_TASKS).map((line) => (
+              {preview.lines.map((line) => (
                 <li
                   key={line.lineNumber}
                   className={`batch-preview-line${line.error ? ' batch-preview-line--invalid' : ''}`}
@@ -103,7 +119,7 @@ export function BatchPanel({ initialText, onSubmit, onClose }: BatchPanelProps) 
           </div>
         )}
         <div className="batch-actions">
-          <button className="button-primary" type="submit" disabled={!preview.valid}>
+          <button className="button-primary" type="submit" disabled={oversized || !preview.valid}>
             Добавить задачи
           </button>
           <button className="button-quiet" type="button" onClick={onClose}>Отмена</button>

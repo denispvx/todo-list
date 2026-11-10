@@ -228,4 +228,16 @@ describe('useFocusSession', () => {
     expect(result.current.persistenceFailed).toBe(false);
     expect(window.localStorage.getItem(STORAGE_KEY)).toBe('keep task data');
   });
+
+  it('keeps a newer timer from another tab when the stale tab starts or clears its timer', () => {
+    seed(90_000);
+    const { result } = mount();
+    const external = seed(45_000);
+
+    act(() => result.current.start());
+    expect(result.current.running).toBe(true);
+    expect(result.current.persistenceFailed).toBe(true);
+    act(() => result.current.clear());
+    expect(window.localStorage.getItem(FOCUS_STORAGE_KEY)).toBe(external);
+  });
 });

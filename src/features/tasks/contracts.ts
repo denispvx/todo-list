@@ -9,7 +9,7 @@ export interface TaskFormProps {
 
 export interface BatchPanelProps {
   initialText: string;
-  onSubmit(text: string): BatchAddResult;
+  onSubmit(titles: readonly string[]): BatchAddResult;
   onClose(): void;
 }
 

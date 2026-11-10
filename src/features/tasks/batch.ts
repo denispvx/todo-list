@@ -2,6 +2,7 @@ import { validateTaskTitle } from './model';
 import type { TitleError } from './model';
 
 export const MAX_BATCH_TASKS = 50;
+export const MAX_BATCH_DRAFT_LENGTH = 32_768;
 
 export type BatchLine = Readonly<{
   lineNumber: number;
@@ -12,13 +13,17 @@ export type BatchLine = Readonly<{
 export type BatchPreview = Readonly<{
   lines: readonly BatchLine[];
   total: number;
+  tooLarge: boolean;
   tooMany: boolean;
   valid: boolean;
 }>;
 
-const listMarker = /^(?:(?:[-*•]\s+)?\[[ xX]\](?:\s+|$)|[-*•](?:\s+|$)|\d+[.)](?:\s+|$))/;
+const listMarker = /^(?:(?:[-+*•]\s+)?\[[ xX]\](?:\s+|$)|[-+*•](?:\s+|$)|\d+[.)](?:\s+|$))/;
 
 export function parseBatchDraft(text: string): BatchPreview {
+  if (text.length > MAX_BATCH_DRAFT_LENGTH) {
+    return { lines: [], total: 0, tooLarge: true, tooMany: false, valid: false };
+  }
   const lines: BatchLine[] = [];
   let total = 0;
 
@@ -41,6 +46,7 @@ export function parseBatchDraft(text: string): BatchPreview {
   return {
     lines,
     total,
+    tooLarge: false,
     tooMany,
     valid: total > 0 && !tooMany && lines.every((line) => line.error === null),
   };

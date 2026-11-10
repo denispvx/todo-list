@@ -1,7 +1,7 @@
 import { act, renderHook } from '@testing-library/react';
 import { StrictMode } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { MAX_BATCH_TASKS, parseBatchDraft } from '../src/features/tasks/batch';
+import { MAX_BATCH_DRAFT_LENGTH, MAX_BATCH_TASKS, parseBatchDraft } from '../src/features/tasks/batch';
 import { STORAGE_KEY, STORAGE_VERSION, type BatchAddResult } from '../src/features/tasks/model';
 import { useTasks } from '../src/features/tasks/useTasks';
 
@@ -14,13 +14,13 @@ describe('parseBatchDraft', () => {
 
     expect(preview).toEqual({
       lines: ['Первая', 'Вторая', 'Третья', 'Четвёртая', 'Пятая', 'Шестая'].map((title, index) => ({ lineNumber: index + 2, title, error: null })),
-      total: 6, tooMany: false, valid: true,
+      total: 6, tooLarge: false, tooMany: false, valid: true,
     });
   });
 
   it('ignores blank and marker-only lines', () => {
     expect(parseBatchDraft('\n \n- \n* \n• \n1. \n2) \n- [ ]\n- [x]')).toEqual({
-      lines: [], total: 0, tooMany: false, valid: false,
+      lines: [], total: 0, tooLarge: false, tooMany: false, valid: false,
     });
   });
 
@@ -53,6 +53,11 @@ describe('parseBatchDraft', () => {
   it('uses the same 200 UTF-16 limit for emoji as single-task input', () => {
     expect(parseBatchDraft('📝'.repeat(100)).valid).toBe(true);
     expect(parseBatchDraft(`${'📝'.repeat(100)}а`).lines[0]?.error).toBe('too-long');
+  });
+
+  it('rejects an oversized clipboard draft before building any preview', () => {
+    const preview = parseBatchDraft(`Допустимая задача\n${' '.repeat(MAX_BATCH_DRAFT_LENGTH)}`);
+    expect(preview).toMatchObject({ tooLarge: true, valid: false, lines: [] });
   });
 });
 

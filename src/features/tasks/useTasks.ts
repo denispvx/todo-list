@@ -16,14 +16,15 @@ type RemovalRecord = Readonly<{
 type TasksState = Readonly<{
   tasks: readonly Task[];
   storageStatus: StorageStatus;
+  snapshot: string | null;
   lastRemoval: RemovalRecord | null;
 }>;
 
 function initialState(): TasksState {
   const loaded = loadTasks();
   return loaded.kind === 'ready'
-    ? { tasks: loaded.tasks, storageStatus: 'available', lastRemoval: null }
-    : { tasks: [], storageStatus: loaded.kind, lastRemoval: null };
+    ? { tasks: loaded.tasks, storageStatus: 'available', snapshot: loaded.snapshot, lastRemoval: null }
+    : { tasks: [], storageStatus: loaded.kind, snapshot: loaded.kind === 'invalid' ? loaded.snapshot : null, lastRemoval: null };
 }
 
 export function useTasks(): TasksController {
@@ -40,12 +41,14 @@ export function useTasks(): TasksController {
     const tasks = tasksReducer(current.tasks, action);
     if (tasks === current.tasks) return;
 
-    let storageStatus = current.storageStatus;
+    let { storageStatus, snapshot } = current;
     if (storageStatus === 'available' || storageStatus === 'write-error') {
-      storageStatus = saveTasks(tasks).ok ? 'available' : 'write-error';
+      const result = saveTasks(tasks, snapshot);
+      storageStatus = result.ok ? 'available' : result.reason;
+      if (result.ok) snapshot = result.snapshot;
     }
 
-    publish({ tasks, storageStatus, lastRemoval: removal === undefined ? current.lastRemoval : removal });
+    publish({ tasks, storageStatus, snapshot, lastRemoval: removal === undefined ? current.lastRemoval : removal });
   }
 
   function addTask(input: string): AddTaskResult {
@@ -154,9 +157,13 @@ export function useTasks(): TasksController {
     const current = latestState.current;
     if (current.storageStatus !== 'invalid') return { ok: false };
 
-    const result = saveTasks(current.tasks);
-    if (result.ok) publish({ ...current, storageStatus: 'available' });
-    return result;
+    const result = saveTasks(current.tasks, current.snapshot);
+    if (result.ok) {
+      publish({ ...current, storageStatus: 'available', snapshot: result.snapshot });
+      return { ok: true };
+    }
+    if (result.reason === 'conflict') publish({ ...current, storageStatus: 'conflict' });
+    return { ok: false };
   }
 
   return {

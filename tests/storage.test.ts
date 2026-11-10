@@ -23,17 +23,18 @@ describe('loadTasks', () => {
   it('treats an absent key as an empty list without creating storage data', () => {
     const setItem = vi.spyOn(Storage.prototype, 'setItem');
 
-    expect(loadTasks()).toEqual({ kind: 'ready', tasks: [] });
+    expect(loadTasks()).toEqual({ kind: 'ready', tasks: [], snapshot: null });
     expect(setItem).not.toHaveBeenCalled();
     expect(window.localStorage.getItem(STORAGE_KEY)).toBeNull();
   });
 
   it('restores text, completion and order without writing during a read', () => {
     const tasks = [task, { id: 'second', title: task.title, completed: false }];
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(envelope(tasks)));
+    const raw = JSON.stringify(envelope(tasks));
+    window.localStorage.setItem(STORAGE_KEY, raw);
     const setItem = vi.spyOn(Storage.prototype, 'setItem');
 
-    expect(loadTasks()).toEqual({ kind: 'ready', tasks });
+    expect(loadTasks()).toEqual({ kind: 'ready', tasks, snapshot: raw });
     expect(setItem).not.toHaveBeenCalled();
   });
 
@@ -42,7 +43,7 @@ describe('loadTasks', () => {
     window.localStorage.setItem(STORAGE_KEY, raw);
     const setItem = vi.spyOn(Storage.prototype, 'setItem');
 
-    expect(loadTasks()).toEqual({ kind: 'invalid' });
+    expect(loadTasks()).toEqual({ kind: 'invalid', snapshot: raw });
     expect(setItem).not.toHaveBeenCalled();
     expect(window.localStorage.getItem(STORAGE_KEY)).toBe(raw);
   });
@@ -68,7 +69,7 @@ describe('loadTasks', () => {
     const raw = JSON.stringify(value);
     window.localStorage.setItem(STORAGE_KEY, raw);
 
-    expect(loadTasks()).toEqual({ kind: 'invalid' });
+    expect(loadTasks()).toEqual({ kind: 'invalid', snapshot: raw });
     expect(window.localStorage.getItem(STORAGE_KEY)).toBe(raw);
   });
 
@@ -93,16 +94,17 @@ describe('saveTasks', () => {
   it('writes the versioned list without changing other application keys', () => {
     window.localStorage.setItem('another-app:key', 'keep me');
 
-    expect(saveTasks([task])).toEqual({ ok: true });
+    expect(saveTasks([task], null)).toEqual({ ok: true, snapshot: JSON.stringify(envelope([task])) });
     expect(JSON.parse(window.localStorage.getItem(STORAGE_KEY)!)).toEqual(envelope([task]));
     expect(window.localStorage.getItem('another-app:key')).toBe('keep me');
   });
 
   it('persists an empty list so deleted tasks do not reappear', () => {
-    saveTasks([task]);
-
-    expect(saveTasks([])).toEqual({ ok: true });
-    expect(loadTasks()).toEqual({ kind: 'ready', tasks: [] });
+    const initial = saveTasks([task], null);
+    if (!initial.ok) throw new Error('Could not seed the test list');
+    const empty = JSON.stringify(envelope([]));
+    expect(saveTasks([], initial.snapshot)).toEqual({ ok: true, snapshot: empty });
+    expect(loadTasks()).toEqual({ kind: 'ready', tasks: [], snapshot: empty });
   });
 
   it('reports a write error and preserves previously saved data', () => {
@@ -112,7 +114,7 @@ describe('saveTasks', () => {
       throw new DOMException('Storage quota exceeded', 'QuotaExceededError');
     });
 
-    expect(saveTasks([])).toEqual({ ok: false });
+    expect(saveTasks([], raw)).toEqual({ ok: false, reason: 'write-error' });
     expect(window.localStorage.getItem(STORAGE_KEY)).toBe(raw);
   });
 
@@ -121,6 +123,6 @@ describe('saveTasks', () => {
       throw new DOMException('Storage access denied', 'SecurityError');
     });
 
-    expect(saveTasks([task])).toEqual({ ok: false });
+    expect(saveTasks([task], null)).toEqual({ ok: false, reason: 'write-error' });
   });
 });

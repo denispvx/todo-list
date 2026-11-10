@@ -3,7 +3,7 @@ import type { UndoNoticeProps } from '../contracts';
 export function UndoNotice({ title, onUndo, onDismiss }: UndoNoticeProps) {
   return (
     <aside className="undo-notice" aria-label="Отмена удаления">
-      <div className="undo-message" role="status" aria-live="polite" aria-atomic="true">
+      <div className="undo-message">
         <p className="undo-heading">Задача удалена</p>
         <p className="undo-title" title={title}>{title}</p>
       </div>

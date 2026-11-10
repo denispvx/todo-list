@@ -37,8 +37,9 @@ export function TaskPlanningFields({ value, onChange, dateError }: Props) {
             value={value.dueDate} aria-invalid={Boolean(dateError)}
             aria-describedby={dateError ? `${id}-date-error` : undefined}
             onChange={(event) => onChange({ ...value, dueDate: event.target.value })} />
-          {value.dueDate && <button type="button" className="planning-clear"
+          {(value.dueDate || dateError) && <button type="button" className="planning-clear"
             aria-label="Убрать срок" title="Убрать срок" onClick={() => {
+              if (dateRef.current) dateRef.current.value = '';
               onChange({ ...value, dueDate: '' });
               dateRef.current?.focus();
             }}>

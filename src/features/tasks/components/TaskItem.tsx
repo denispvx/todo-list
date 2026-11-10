@@ -5,6 +5,13 @@ import { TaskPlanningFields, type TaskPlanning } from './TaskPlanningFields';
 import { TaskMeta } from './TaskMeta';
 import '../../../styles/task-edit.css';
 
+const messages: Record<TaskDetailsError, string> = {
+  empty: 'Введите название задачи.',
+  'too-long': `Не больше ${MAX_TASK_TITLE_LENGTH} символов.`,
+  'invalid-date': 'Укажите существующую дату.',
+  'invalid-planning': 'Проверьте параметры задачи.',
+};
+
 export function TaskItem({ task, onToggle, onRemove, onUpdate, onUpdateDetails }: TaskItemProps) {
   const checkboxId = useId();
   const editId = useId();
@@ -17,12 +24,6 @@ export function TaskItem({ task, onToggle, onRemove, onUpdate, onUpdateDetails }
   const restoreFocus = useRef(false);
   const metaId = useId();
   const hasMeta = task.important || (task.urgency && task.urgency !== 'none') || task.dueDate;
-  const messages: Record<TaskDetailsError, string> = {
-    empty: 'Введите название задачи.',
-    'too-long': 'Не больше 200 символов.',
-    'invalid-date': 'Укажите существующую дату.',
-    'invalid-planning': 'Проверьте параметры задачи.',
-  };
 
   useLayoutEffect(() => {
     if (editing) {
@@ -40,19 +41,19 @@ export function TaskItem({ task, onToggle, onRemove, onUpdate, onUpdateDetails }
     setError(null);
   }
 
-  function save(event: FormEvent) {
+  function save(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!onUpdate && !onUpdateDetails) return;
-    const form = event.currentTarget as HTMLFormElement;
-    const dateInput = form.querySelector<HTMLInputElement>('input[type="date"]');
-    if (dateInput?.validity.badInput) {
+    const dateInput = event.currentTarget.querySelector<HTMLInputElement>('input[type="date"]');
+    if (dateInput && !dateInput.validity.valid) {
       setError('invalid-date');
       dateInput.focus();
       return;
     }
     const result = onUpdateDetails
       ? onUpdateDetails(task.id, { title: draft, ...planning })
-      : onUpdate!(task.id, draft);
+      : onUpdate?.(task.id, draft);
+    if (!result) return;
     if (result.ok) finishEditing();
     else {
       setError(result.error);
@@ -100,15 +101,15 @@ export function TaskItem({ task, onToggle, onRemove, onUpdate, onUpdateDetails }
         <>
           <div className="task-main">
             <label className="task-label" htmlFor={checkboxId}>
-            <input
-              id={checkboxId}
-              className="task-checkbox"
-              type="checkbox"
-              checked={task.completed}
-              aria-describedby={hasMeta ? metaId : undefined}
-              onChange={() => onToggle(task.id)}
-            />
-            <span className="task-title">{task.title}</span>
+              <input
+                id={checkboxId}
+                className="task-checkbox"
+                type="checkbox"
+                checked={task.completed}
+                aria-describedby={hasMeta ? metaId : undefined}
+                onChange={() => onToggle(task.id)}
+              />
+              <span className="task-title">{task.title}</span>
             </label>
             <TaskMeta task={task} id={metaId} />
           </div>

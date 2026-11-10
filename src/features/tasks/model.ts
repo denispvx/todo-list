@@ -53,12 +53,12 @@ export type TaskAction =
   | { readonly type: 'restore'; readonly task: Task; readonly index: number };
 
 export type LoadResult =
-  | { readonly kind: 'ready'; readonly tasks: readonly Task[] }
-  | { readonly kind: 'invalid' }
+  | { readonly kind: 'ready'; readonly tasks: readonly Task[]; readonly snapshot: string | null }
+  | { readonly kind: 'invalid'; readonly snapshot: string }
   | { readonly kind: 'unavailable' };
 
 export type SaveResult = { readonly ok: true } | { readonly ok: false };
-export type StorageStatus = 'available' | 'invalid' | 'unavailable' | 'write-error';
+export type StorageStatus = 'available' | 'invalid' | 'unavailable' | 'write-error' | 'conflict';
 
 export interface TasksController {
   readonly tasks: readonly Task[];

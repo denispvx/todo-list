@@ -4,6 +4,13 @@ import { MAX_TASK_TITLE_LENGTH, type TaskDetailsError } from '../model';
 import { formatDueDate } from '../planning';
 import { TaskPlanningFields, type TaskPlanning } from './TaskPlanningFields';
 
+const messages: Record<TaskDetailsError, string> = {
+  empty: 'Введите название задачи.',
+  'too-long': `Название должно быть не длиннее ${MAX_TASK_TITLE_LENGTH} символов.`,
+  'invalid-date': 'Укажите существующую дату.',
+  'invalid-planning': 'Проверьте параметры задачи.',
+};
+
 export function TaskForm({ onAdd, onAddPlanned, onBulkPaste, onOpenBulk }: TaskFormProps) {
   const [title, setTitle] = useState('');
   const [error, setError] = useState<TaskDetailsError | null>(null);
@@ -14,12 +21,6 @@ export function TaskForm({ onAdd, onAddPlanned, onBulkPaste, onOpenBulk }: TaskF
   const hintId = useId();
   const errorId = useId();
   const planningId = useId();
-  const messages: Record<TaskDetailsError, string> = {
-    empty: 'Введите название задачи.',
-    'too-long': `Название должно быть не длиннее ${MAX_TASK_TITLE_LENGTH} символов.`,
-    'invalid-date': 'Укажите существующую дату.',
-    'invalid-planning': 'Проверьте параметры задачи.',
-  };
   const hasPlanning = planning.important || planning.urgency !== 'none' || Boolean(planning.dueDate);
   const planningSummary = [
     planning.important ? 'Важно' : '',
@@ -42,7 +43,7 @@ export function TaskForm({ onAdd, onAddPlanned, onBulkPaste, onOpenBulk }: TaskF
     }
 
     const dateInput = event.currentTarget.querySelector<HTMLInputElement>('input[type="date"]');
-    if (dateInput?.validity.badInput) {
+    if (dateInput && !dateInput.validity.valid) {
       setError('invalid-date');
       dateInput.focus();
       return;
@@ -121,7 +122,15 @@ export function TaskForm({ onAdd, onAddPlanned, onBulkPaste, onOpenBulk }: TaskF
           <button className={`planning-trigger${hasPlanning ? ' planning-trigger--set' : ''}`} type="button"
             aria-label="Срок и приоритет" aria-expanded={planningOpen} aria-controls={planningId}
             aria-describedby={hasPlanning && !planningOpen ? `${planningId}-summary` : undefined}
-            onClick={() => setPlanningOpen((current) => !current)}>
+            onClick={() => {
+              const dateInput = formRef.current?.querySelector<HTMLInputElement>('input[type="date"]');
+              if (planningOpen && dateInput && !dateInput.validity.valid) {
+                setError('invalid-date');
+                dateInput.focus();
+                return;
+              }
+              setPlanningOpen(!planningOpen);
+            }}>
             <svg viewBox="0 0 20 20" aria-hidden="true"><path d={planningOpen ? 'M4 10h12' : 'M10 4v12M4 10h12'} /></svg>
             Срок и приоритет
           </button>

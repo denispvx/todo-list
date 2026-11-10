@@ -8,7 +8,7 @@ export function isTaskUrgency(value: unknown): value is TaskUrgency {
 }
 
 export function isValidDate(value: unknown): value is string {
-  if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  if (typeof value !== 'string' || value.length !== 10 || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
   const year = Number(value.slice(0, 4));
   const month = Number(value.slice(5, 7));
   const day = Number(value.slice(8, 10));
@@ -17,6 +17,9 @@ export function isValidDate(value: unknown): value is string {
   const days = [31, leap ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
   return day <= days[month - 1]!;
 }
+
+const shortDate = new Intl.DateTimeFormat('ru', { day: 'numeric', month: 'short', timeZone: 'UTC' });
+const datedYear = new Intl.DateTimeFormat('ru', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' });
 
 export function validateTaskDetails(details: TaskDetails):
   | { readonly ok: true; readonly details: TaskDetails }
@@ -49,13 +52,10 @@ export function formatDueDate(dueDate: string, completed: boolean, now = new Dat
   tomorrow.setDate(tomorrow.getDate() + 1);
   if (dueDate === today) return { label: 'Сегодня', overdue: false };
   if (dueDate === localDateKey(tomorrow)) return { label: 'Завтра', overdue: false };
-  // Construct a local calendar day explicitly: parsing an ISO date as a Date uses UTC.
-  const date = new Date(0);
-  date.setFullYear(Number(dueDate.slice(0, 4)), Number(dueDate.slice(5, 7)) - 1, Number(dueDate.slice(8, 10)));
-  date.setHours(12, 0, 0, 0);
-  const formatted = new Intl.DateTimeFormat('ru', {
-    day: 'numeric', month: 'short', ...(date.getFullYear() !== now.getFullYear() ? { year: 'numeric' } : {}),
-  }).format(date);
+  // The stored date is a calendar value. Format it in UTC without shifting the day.
+  const date = new Date(`${dueDate}T00:00:00Z`);
+  const formatter = date.getUTCFullYear() === now.getFullYear() ? shortDate : datedYear;
+  const formatted = formatter.format(date);
   const overdue = !completed && dueDate < today;
   return { label: overdue ? `Просрочено · ${formatted}` : formatted, overdue };
 }

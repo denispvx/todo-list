@@ -1,5 +1,5 @@
 import { STORAGE_KEY, STORAGE_VERSION, validateTaskTitle } from './model';
-import type { LoadResult, SaveResult, StoredTasks, Task } from './model';
+import type { LoadResult, StoredTasks, Task } from './model';
 import { isTaskUrgency, isValidDate } from './planning';
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -50,23 +50,32 @@ export function loadTasks(): LoadResult {
     return { kind: 'unavailable' };
   }
 
-  if (serialized === null) return { kind: 'ready', tasks: [] };
+  if (serialized === null) return { kind: 'ready', tasks: [], snapshot: null };
 
   try {
     const value: unknown = JSON.parse(serialized);
     const tasks = decodeTasks(value);
-    return tasks === null ? { kind: 'invalid' } : { kind: 'ready', tasks };
+    return tasks === null
+      ? { kind: 'invalid', snapshot: serialized }
+      : { kind: 'ready', tasks, snapshot: serialized };
   } catch {
-    return { kind: 'invalid' };
+    return { kind: 'invalid', snapshot: serialized };
   }
 }
 
-export function saveTasks(tasks: readonly Task[]): SaveResult {
+type WriteResult =
+  | { readonly ok: true; readonly snapshot: string }
+  | { readonly ok: false; readonly reason: 'write-error' | 'conflict' };
+
+export function saveTasks(tasks: readonly Task[], expectedSnapshot: string | null): WriteResult {
   try {
+    const storage = window.localStorage;
     const payload: StoredTasks = { version: STORAGE_VERSION, tasks };
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
-    return { ok: true };
+    const snapshot = JSON.stringify(payload);
+    if (storage.getItem(STORAGE_KEY) !== expectedSnapshot) return { ok: false, reason: 'conflict' };
+    storage.setItem(STORAGE_KEY, snapshot);
+    return { ok: true, snapshot };
   } catch {
-    return { ok: false };
+    return { ok: false, reason: 'write-error' };
   }
 }
